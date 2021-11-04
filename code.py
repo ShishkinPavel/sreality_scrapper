@@ -13,8 +13,9 @@ WEBSITE = f'''https://www.sreality.cz/api/cs/v2/estates?category_main_cb=4&categ
 WEBJSON = json.loads(get(WEBSITE, headers=headers).text)
 count_of_page = math.ceil(WEBJSON['result_size'] / per_page)
 offer = "https://www.sreality.cz/api"
-info = {}
+# add a repeating piece of the offer link here
 link_pattern = "https://www.sreality.cz/detail/prodej/komercni/cinzovni-dum/"
+info = {}
 
 
 def get_page(number_of_actual_elem):
