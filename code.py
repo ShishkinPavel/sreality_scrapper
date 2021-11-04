@@ -30,10 +30,10 @@ def get_page(number_of_actual_elem):
         info.setdefault(x['_links']['self']['title'], [])
         info[x['_links']['self']['title']].append(offer + x['_links']['self']['href'])
 
-        # I didn't find another way :(
+        # I didn't find another way, but I really wanted to add a normal link to the offer :(
         info.setdefault('Odkaz', [])
         info['Odkaz'].append(link_pattern + x['seo']['locality'] + "/" +
-                             re.sub("\D", '', x['_links']['self']['href'])[1:])
+                             x['_links']['self']['href'].split('estates/')[1])
 
         # name
         info.setdefault(x['name']['name'], [])
