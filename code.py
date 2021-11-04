@@ -2,6 +2,7 @@ import json
 import math
 import pandas as pd
 from requests import get
+import re
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 \
@@ -13,6 +14,7 @@ WEBJSON = json.loads(get(WEBSITE, headers=headers).text)
 count_of_page = math.ceil(WEBJSON['result_size'] / per_page)
 offer = "https://www.sreality.cz/api"
 info = {}
+link_pattern = "https://www.sreality.cz/detail/prodej/komercni/cinzovni-dum/"
 
 
 def get_page(number_of_actual_elem):
@@ -26,6 +28,11 @@ def get_page(number_of_actual_elem):
         # link
         info.setdefault(x['_links']['self']['title'], [])
         info[x['_links']['self']['title']].append(offer + x['_links']['self']['href'])
+
+        # I didn't find another way :(
+        info.setdefault('Odkaz', [])
+        info['Odkaz'].append(link_pattern + x['seo']['locality'] + "/" +
+                             re.sub("\D", '', x['_links']['self']['href'])[1:])
 
         # name
         info.setdefault(x['name']['name'], [])
