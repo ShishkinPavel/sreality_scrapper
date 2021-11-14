@@ -57,7 +57,7 @@ def get_page(number_of_actual_elem):
         for k in x['items']:
             # for example, if this is the fifth house and the parameter has just appeared,
             # then you need to add an empty parameter to the four previous houses
-            if k['name'] not in list(info.keys()):
+            if k['name'] not in info:
                 new_parameter(k['name'], number_of_actual_elem)
             # sometimes parameter is array of parameters
             if type(k['value']) != list:
@@ -67,7 +67,7 @@ def get_page(number_of_actual_elem):
 
         # near objects
         for k in x['poi']:
-            if k['name'] not in list(info.keys()):
+            if k['name'] not in info:
                 new_parameter(k['name'], number_of_actual_elem)
             info[k['name']].append(k['distance'])
 
