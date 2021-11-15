@@ -1,92 +1,92 @@
 import json
-import math
+from math import ceil
 import pandas as pd
 from requests import get
-import re
 
-headers = {
+HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 \
     (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'
 }
-page, per_page = 1, 999
-WEBSITE = f'''https://www.sreality.cz/api/cs/v2/estates?category_main_cb=4&category_sub_cb=38&category_type_cb=1&locality_region_id=10%7C2%7C8%7C14%7C6&page={page}&per_page={per_page}&tms=1635964216059'''
-WEBJSON = json.loads(get(WEBSITE, headers=headers).text)
-count_of_page = math.ceil(WEBJSON['result_size'] / per_page)
-offer = "https://www.sreality.cz/api"
+page, PER_PAGE = 1, 999
+WEBSITE = f'''https://www.sreality.cz/api/cs/v2/estates?category_main_cb=4&category_sub_cb=38&category_type_cb=1&locality_region_id=10%7C2%7C8%7C14%7C6&page={page}&per_page={PER_PAGE}&tms=1635964216059'''
+WEB_JSON = json.loads(get(WEBSITE, headers=HEADERS).text)
+COUNT_OF_PAGE = ceil(WEB_JSON['result_size'] / PER_PAGE)
+XHR_PATTERN = "https://www.sreality.cz/api"
+
 # add a repeating piece of the offer link here
-link_pattern = "https://www.sreality.cz/detail/prodej/komercni/cinzovni-dum/"
-info = {}
+LINK_PATTERN = "https://www.sreality.cz/detail/prodej/komercni/cinzovni-dum/"
+data = {}
 
 
 def get_page(number_of_actual_elem):
-    website = f'''https://www.sreality.cz/api/cs/v2/estates?category_main_cb=4&category_sub_cb=38&category_type_cb=1&locality_region_id=10%7C2%7C8%7C14%7C6&page={page}&per_page={per_page}&tms=1635964216059'''
-    page_json = json.loads(get(website, headers=headers).text)
+    website = f'''https://www.sreality.cz/api/cs/v2/estates?category_main_cb=4&category_sub_cb=38&category_type_cb=1&locality_region_id=10%7C2%7C8%7C14%7C6&page={page}&per_page={PER_PAGE}&tms=1635964216059'''
+    page_json = json.loads(get(website, headers=HEADERS).text)
 
     # the first element is advertising, so I trimmed it
-    for i in page_json['_embedded']['estates'][1:]:
-        x = json.loads(get(offer + i['_links']['self']['href'], headers=headers).text)
+    for offer in page_json['_embedded']['estates'][1:]:
+        actual_offer = json.loads(get(XHR_PATTERN + offer['_links']['self']['href'], headers=HEADERS).text)
 
         # link
-        info.setdefault(x['_links']['self']['title'], [])
-        info[x['_links']['self']['title']].append(offer + x['_links']['self']['href'])
+        data.setdefault(actual_offer['_links']['self']['title'], [])
+        data[actual_offer['_links']['self']['title']].append(XHR_PATTERN + actual_offer['_links']['self']['href'])
 
         # I didn't find another way, but I really wanted to add a normal link to the offer :(
-        info.setdefault('Odkaz', [])
-        info['Odkaz'].append(link_pattern + x['seo']['locality'] + "/" +
-                             x['_links']['self']['href'].split('estates/')[1])
+        data.setdefault('Odkaz', [])
+        data['Odkaz'].append(LINK_PATTERN + actual_offer['seo']['locality'] + "/" +
+                             actual_offer['_links']['self']['href'].split('estates/')[1])
 
         # name
-        info.setdefault(x['name']['name'], [])
-        info[x['name']['name']].append(x['name']['value'])
+        data.setdefault(actual_offer['name']['name'], [])
+        data[actual_offer['name']['name']].append(actual_offer['name']['value'])
 
         # description
-        info.setdefault(x['text']['name'], [])
-        info[x['text']['name']].append(x['text']['value'])
+        data.setdefault(actual_offer['text']['name'], [])
+        data[actual_offer['text']['name']].append(actual_offer['text']['value'])
 
         # locality
-        info.setdefault(x['locality']['name'], [])
-        info[x['locality']['name']].append(x['locality']['value'])
+        data.setdefault(actual_offer['locality']['name'], [])
+        data[actual_offer['locality']['name']].append(actual_offer['locality']['value'])
 
         # coordinates
-        info.setdefault('lat', [])
-        info['lat'].append(x['map']['lat'])
-        info.setdefault('lon', [])
-        info['lon'].append(x['map']['lon'])
+        data.setdefault('lat', [])
+        data['lat'].append(actual_offer['map']['lat'])
+        data.setdefault('lon', [])
+        data['lon'].append(actual_offer['map']['lon'])
 
         # parameters
-        for k in x['items']:
+        for k in actual_offer['items']:
             # for example, if this is the fifth house and the parameter has just appeared,
             # then you need to add an empty parameter to the four previous houses
-            if k['name'] not in info:
+            if k['name'] not in data:
                 new_parameter(k['name'], number_of_actual_elem)
             # sometimes parameter is array of parameters
             if type(k['value']) != list:
-                info[k['name']].append(k['value'])
+                data[k['name']].append(k['value'])
             else:
-                info[k['name']].append("".join([j['value'] for j in k['value']]))
+                data[k['name']].append("".join([j['value'] for j in k['value']]))
 
         # near objects
-        for k in x['poi']:
-            if k['name'] not in info:
+        for k in actual_offer['poi']:
+            if k['name'] not in data:
                 new_parameter(k['name'], number_of_actual_elem)
-            info[k['name']].append(k['distance'])
+            data[k['name']].append(k['distance'])
 
         # if the house has no parameters that exist in the dictionary, add an empty one
-        for k in info.keys():
-            if len(info[k]) != number_of_actual_elem + 1:
-                info[k].append("")
+        for k in data.keys():
+            if len(data[k]) != number_of_actual_elem + 1:
+                data[k].append("")
 
         number_of_actual_elem += 1
 
 
 def new_parameter(key, count):
-    info.setdefault(key, [])
+    data.setdefault(key, [])
     for i in range(count):
-        info[key].append("")
+        data[key].append("")
 
 
-for _ in range(count_of_page):
-    get_page((page - 1) * per_page)
+for _ in range(COUNT_OF_PAGE):
+    get_page((page - 1) * PER_PAGE)
     page += 1
 
-pd.DataFrame(info).to_excel('./result.xlsx')
+pd.DataFrame(data).to_excel('./result.xlsx')
